@@ -10,14 +10,20 @@
 #define BUFLEN 4096  // 缓冲区大小
 #define HTTP_PORT "80"  // HTTP 端口
 
+// 获取当前时间（秒）
+double get_time_seconds() {
+    struct timespec ts;
+    timespec_get(&ts, TIME_UTC);
+    return ts.tv_sec + (ts.tv_nsec / 1e9);
+}
+
 int main(int argc, char* argv[]) {
     WSADATA wsaData;
     SOCKET fd;
     struct addrinfo hints, * ai, * ai0;
     char buf[BUFLEN];
     int rlen;
-    struct timespec before_connect, after_connect;
-    
+
     if (argc != 2) {
         printf("Usage: %s <hostname>\n", argv[0]);
         return 1;
@@ -49,7 +55,7 @@ int main(int argc, char* argv[]) {
         }
 
         // 记录 connect() 前的时间
-        clock_gettime(CLOCK_MONOTONIC, &before_connect);
+        double before_connect = get_time_seconds();
 
         if (connect(fd, ai->ai_addr, (int)ai->ai_addrlen) == SOCKET_ERROR) {
             fprintf(stderr, "Unable to connect: %d\n", WSAGetLastError());
@@ -58,12 +64,10 @@ int main(int argc, char* argv[]) {
         }
 
         // 记录 connect() 后的时间
-        clock_gettime(CLOCK_MONOTONIC, &after_connect);
+        double after_connect = get_time_seconds();
 
         // 计算并打印 TCP 连接时间
-        double connect_time = (after_connect.tv_sec - before_connect.tv_sec) +
-                              (after_connect.tv_nsec - before_connect.tv_nsec) / 1e9;
-        printf("Connected to %s in %.6f seconds\n", argv[1], connect_time);
+        printf("Connected to %s in %.6f seconds\n", argv[1], after_connect - before_connect);
 
         // 发送 HTTP 请求
         snprintf(buf, BUFLEN, "GET / HTTP/1.1\r\nHost: %s\r\nConnection: close\r\n\r\n", argv[1]);
